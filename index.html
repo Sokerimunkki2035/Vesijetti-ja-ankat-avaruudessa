@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avaruusvesijetti & Kumiankat</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050510;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas {
+            background-color: #0b0b1e;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            border: 2px solid #00ffff;
+        }
+        #instructions {
+            position: absolute;
+            top: 10px;
+            color: #00ffff;
+            font-size: 16px;
+            text-shadow: 0 0 5px #00ffff;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="instructions">Ohjaa nuolilla tai WASD | Väistä tai kerää ankkoja!</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Pelin hahmot ja muuttujat
+        const player = {
+            x: 400,
+            y: 500,
+            width: 60,
+            height: 30,
+            speed: 5,
+            color: "#ff00ff" // Neon-vaaleanpunainen vesijetti
+        };
+
+        const ducks = [];
+        const stars = [];
+        let score = 0;
+
+        // Luodaan taustatähdet leijumaan
+        for (let i = 0; i < 50; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2 + 1,
+                speed: Math.random() * 1 + 0.5
+            });
+        }
+
+        // Luodaan kumiankkoja
+        function spawnDuck() {
+            if (ducks.length < 8) {
+                ducks.push({
+                    x: Math.random() * (canvas.width - 40),
+                    y: -40,
+                    width: 40,
+                    height: 40,
+                    speed: Math.random() * 2 + 1,
+                    angle: Math.random() * 360,
+                    spin: Math.random() * 2 - 1
+                });
+            }
+        }
+
+        // Ohjaus
+        const keys = {};
+        window.addEventListener("keydown", e => keys[e.key] = true);
+        window.addEventListener("keyup", e => keys[e.key] = false);
+
+        // Piirretään vesijetti
+        function drawPlayer(x, y) {
+            ctx.fillStyle = player.color;
+            // Vesijetin runko
+            ctx.beginPath();
+            ctx.moveTo(x, y + 15);
+            ctx.lineTo(x + 50, y);
+            ctx.lineTo(x + 60, y + 15);
+            ctx.lineTo(x + 50, y + 30);
+            ctx.closePath();
+            ctx.fill();
+
+            // Vesijetin penkki/moottori
+            ctx.fillStyle = "#00ffff";
+            ctx.fillRect(x + 10, y + 8, 25, 14);
+
+            // Suihkuvirtaus takana (vauhtiviivat)
+            ctx.strokeStyle = "#00ffff";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x - 5, y + 10);
+            ctx.lineTo(x - 15, y + 15);
+            ctx.lineTo(x - 5, y + 20);
+            ctx.stroke();
+        }
+
+        // Piirretään kumiankka
+        function drawDuck(duck) {
+            ctx.save();
+            ctx.translate(duck.x + duck.width / 2, duck.y + duck.height / 2);
+            ctx.rotate(duck.angle * Math.PI / 180);
+
+            // Vartalo (Keltainen ympyrä/soikio)
+            ctx.fillStyle = "#ffff00";
+            ctx.beginPath();
+            ctx.arc(0, 5, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pää
+            ctx.beginPath();
+            ctx.arc(8, -10, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nokka (Oranssi)
+            ctx.fillStyle = "#ff6600";
+            ctx.beginPath();
+            ctx.moveTo(16, -12);
+            ctx.lineTo(24, -10);
+            ctx.lineTo(16, -6);
+            ctx.closePath();
+            ctx.fill();
+
+            // Silmä
+            ctx.fillStyle = "#000000";
+            ctx.beginPath();
+            ctx.arc(10, -12, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Pelisilmukka
+        function update() {
+            // Liikutetaan tähtiä
+            stars.forEach(star => {
+                star.y += star.speed;
+                if (star.y > canvas.height) star.y = 0;
+            });
+
+            // Pelaajan liikuttaminen
+            if (keys["ArrowUp"] || keys["w"] || keys["W"]) player.y -= player.speed;
+            if (keys["ArrowDown"] || keys["s"] || keys["S"]) player.y += player.speed;
+            if (keys["ArrowLeft"] || keys["a"] || keys["A"]) player.x -= player.speed;
+            if (keys["ArrowRight"] || keys["d"] || keys["D"]) player.x += player.speed;
+
+            // Pysäytetään pelaaja ruudun reunoille
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+            if (player.y < 0) player.y = 0;
+            if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
+
+            // Ankkojen päivitys
+            for (let i = ducks.length - 1; i >= 0; i--) {
+                ducks[i].y += ducks[i].speed;
+                ducks[i].angle += ducks[i].spin; // Ankat pyörivät avaruudessa
+
+                // Tarkistetaan törmäys vesijettiin
+                if (
+                    player.x < ducks[i].x + ducks[i].width &&
+                    player.x + player.width > ducks[i].x &&
+                    player.y < ducks[i].y + ducks[i].height &&
+                    player.y + player.height > ducks[i].y
+                ) {
+                    // Törmäys! Lisätään pisteitä ja poistetaan ankka
+                    score += 1;
+                    ducks.splice(i, 1);
+                    continue;
+                }
+
+                // Jos ankka menee ruudun yli, poistetaan se
+                if (ducks[i].y > canvas.height) {
+                    ducks.splice(i, 1);
+                }
+            }
+
+            spawnDuck();
+        }
+
+        function draw() {
+            // Tyhjennetään ruutu
+            ctx.fillStyle = "#0b0b1e";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Piirretään tähdet
+            ctx.fillStyle = "#ffffff";
+            stars.forEach(star => {
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            });
+
+            // Piirretään hahmot
+            drawPlayer(player.x, player.y);
+            ducks.forEach(drawDuck);
+
+            // Piirretään pisteet
+            ctx.fillStyle = "#00ffff";
+            ctx.font = "20px 'Courier New'";
+            ctx.fillText("Ankat kerätty: " + score, 20, 40);
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Käynnistetään peli
+        loop();
+    </script>
+</body>
+</html>
