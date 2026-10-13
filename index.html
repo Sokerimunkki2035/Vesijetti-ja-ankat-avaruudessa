@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="fi">
 <head>
     <meta charset="UTF-8">
@@ -45,7 +45,6 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Asetetaan canvas sopimaan ruudulle
         function resizeCanvas() {
             canvas.width = window.innerWidth < 600 ? window.innerWidth - 20 : 600;
             canvas.height = window.innerHeight < 800 ? window.innerHeight - 40 : 800;
@@ -55,7 +54,6 @@
         let score = 0;
         const scoreVal = document.getElementById("scoreVal");
 
-        // Pelaaja (Vesijetti pysyy alhaalla keskellä, mutta kallistuu/liikkuu sormen mukaan)
         const player = {
             x: canvas.width / 2,
             y: canvas.height - 120,
@@ -63,14 +61,13 @@
             targetY: canvas.height - 120,
             width: 70,
             height: 40,
-            speed: 0.15 // Pehmeä seuranta
+            speed: 0.15
         };
 
         const ducks = [];
         const stars = [];
         const waterParticles = [];
 
-        // Luodaan 3D-tähdet (tulevat syvyydestä kohti)
         for (let i = 0; i < 60; i++) {
             stars.push({
                 x: Math.random() * canvas.width - canvas.width / 2,
@@ -80,7 +77,6 @@
             });
         }
 
-        // Ohjaus puhelimella (kosketus) ja hiirellä
         function handleMove(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -99,8 +95,8 @@
                 ducks.push({
                     x: Math.random() * canvas.width - canvas.width / 2,
                     y: Math.random() * canvas.height - canvas.height / 2,
-                    z: canvas.width, // Alkaa kaukaisuudesta
-                    size: 10,
+                    z: canvas.width,
+                    size: 15,
                     angle: Math.random() * 360,
                     spin: Math.random() * 4 - 2
                 });
@@ -111,7 +107,6 @@
             ctx.save();
             ctx.translate(x, y);
 
-            // Vesisuihku takaa (efekti avaruusmoottorista)
             waterParticles.forEach(p => {
                 ctx.fillStyle = `rgba(0, 220, 255, ${p.alpha})`;
                 ctx.beginPath();
@@ -119,16 +114,14 @@
                 ctx.fill();
             });
 
-            // Vesijetin runko (katsottuna hieman takaviistosta/ylhäältä)
-            ctx.fillStyle = "#ff00ff"; // Neon magenta
+            ctx.fillStyle = "#ff00ff";
             ctx.beginPath();
-            ctx.moveTo(0, -20);  // Keula
-            ctx.lineTo(25, 20);  // Oikea perä
-            ctx.lineTo(-25, 20); // Vasen perä
+            ctx.moveTo(0, -20);
+            ctx.lineTo(25, 20);
+            ctx.lineTo(-25, 20);
             ctx.closePath();
             ctx.fill();
 
-            // Istuin ja paneeli
             ctx.fillStyle = "#00ffff";
             ctx.fillRect(-8, -5, 16, 15);
 
@@ -136,22 +129,20 @@
         }
 
         function drawDuck(duck, screenX, screenY, size) {
+            if (size <= 0) return;
             ctx.save();
             ctx.translate(screenX, screenY);
             ctx.rotate(duck.angle * Math.PI / 180);
 
-            // Vartalo suhteutettuna etäisyyteen
             ctx.fillStyle = "#ffff00";
             ctx.beginPath();
             ctx.arc(0, 0, size, 0, Math.PI * 2);
             ctx.fill();
 
-            // Pää
             ctx.beginPath();
             ctx.arc(size * 0.5, -size * 0.7, size * 0.6, 0, Math.PI * 2);
             ctx.fill();
 
-            // Nokka
             ctx.fillStyle = "#ff6600";
             ctx.beginPath();
             ctx.moveTo(size * 0.9, -size * 0.8);
@@ -164,21 +155,18 @@
         }
 
         function update() {
-            // Smooth liike kohti sormea/hiirtä
             player.x += (player.targetX - player.x) * player.speed;
             player.y += (player.targetY - player.y) * player.speed;
 
-            // Rajoitetaan pelialueelle
             if (player.x < 40) player.x = 40;
             if (player.x > canvas.width - 40) player.x = canvas.width - 40;
             if (player.y < 100) player.y = 100;
             if (player.y > canvas.height - 40) player.y = canvas.height - 40;
 
-            // Luodaan vesisuihkupaketteja
             if (Math.random() < 0.6) {
                 waterParticles.push({
-                    x: (Math.random() * 16) - 8,
-                    y: 25,
+                    x: player.x + (Math.random() * 16) - 8,
+                    y: player.y + 25,
                     vx: (Math.random() * 2) - 1,
                     vy: Math.random() * 4 + 3,
                     size: Math.random() * 4 + 2,
@@ -186,7 +174,6 @@
                 });
             }
 
-            // Päivitetään vesisuihku
             for (let i = waterParticles.length - 1; i >= 0; i--) {
                 waterParticles[i].x += waterParticles[i].vx;
                 waterParticles[i].y += waterParticles[i].vy;
@@ -194,9 +181,8 @@
                 if (waterParticles[i].alpha <= 0) waterParticles.splice(i, 1);
             }
 
-            // Päivitetään 3D-tähdet lentämään kohti
             stars.forEach(star => {
-                star.z -= 4; // Liikkuu lähemmäs katsojaa
+                star.z -= 4;
                 if (star.z <= 0) {
                     star.z = canvas.width;
                     star.x = Math.random() * canvas.width - canvas.width / 2;
@@ -204,33 +190,28 @@
                 }
             });
 
-            // Päivitetään avaruusankat
             spawnDuck();
             for (let i = ducks.length - 1; i >= 0; i--) {
                 let d = ducks[i];
-                d.z -= 3; // Ankka lentää lähemmäs
+                d.z -= 4;
                 d.angle += d.spin;
 
-                // Lasketaan 3D-projektio ruudulle
-                let k = 400 / d.z;
-                let screenX = d.x * k + canvas.width / 2;
-                let screenY = d.y * k + canvas.height / 2;
-                let currentSize = d.size * k;
-
-                // Jos ankka ohittaa pelaajan
                 if (d.z <= 0) {
                     ducks.splice(i, 1);
                     continue;
                 }
 
-                // Törmäyksentunnistus (nappaus), kun ankka on samalla syvyydellä kuin pelaaja
-                if (d.z < 150 && d.z > 50) {
+                let k = 400 / d.z;
+                let screenX = d.x * k + canvas.width / 2;
+                let screenY = d.y * k + canvas.height / 2;
+                let currentSize = d.size * k;
+
+                if (d.z < 150 && d.z > 30) {
                     let dist = Math.hypot(screenX - player.x, screenY - player.y);
-                    if (dist < currentSize + 30) {
+                    if (dist < currentSize + 25) {
                         score++;
                         scoreVal.innerText = score;
                         ducks.splice(i, 1);
-                        continue;
                     }
                 }
             }
@@ -240,7 +221,6 @@
             ctx.fillStyle = "#07071c";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Piirretään 3D-tähdet
             ctx.fillStyle = "#ffffff";
             stars.forEach(star => {
                 let k = 300 / star.z;
@@ -253,7 +233,6 @@
                 }
             });
 
-            // Piirretään ankat, jotka ovat kauempana kuin pelaaja
             ducks.forEach(d => {
                 let k = 400 / d.z;
                 let screenX = d.x * k + canvas.width / 2;
@@ -265,10 +244,8 @@
                 }
             });
 
-            // Piirretään pelaaja
             drawPlayer(player.x, player.y);
 
-            // Piirretään ankat, jotka ovat jo aivan pelaajan "iholla" tai menneet ohi
             ducks.forEach(d => {
                 let k = 400 / d.z;
                 let screenX = d.x * k + canvas.width / 2;
@@ -285,4 +262,9 @@
             update();
             draw();
             requestAnimationFrame(loop);
-            
+        }
+
+        loop();
+    </script>
+</body>
+</html>
