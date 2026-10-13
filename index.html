@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fi">
 <head>
     <meta charset="UTF-8">
@@ -16,20 +16,21 @@
             height: 100vh;
             font-family: 'Courier New', Courier, monospace;
             position: relative;
+            touch-action: none;
         }
         canvas {
             background-color: #0b0b1e;
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
             border: 2px solid #00ffff;
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
         }
         #scoreBoard {
             position: absolute;
             top: 20px;
             left: 20px;
             color: #00ffff;
-            font-size: 20px;
+            font-size: 22px;
             text-shadow: 0 0 5px #00ffff;
             pointer-events: none;
             z-index: 10;
@@ -46,9 +47,10 @@
         const ctx = canvas.getContext("2d");
 
         function resizeCanvas() {
-            canvas.width = window.innerWidth < 600 ? window.innerWidth - 20 : 600;
-            canvas.height = window.innerHeight < 800 ? window.innerHeight - 40 : 800;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
+        window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
         let score = 0;
@@ -56,12 +58,10 @@
 
         const player = {
             x: canvas.width / 2,
-            y: canvas.height - 120,
+            y: canvas.height - 150,
             targetX: canvas.width / 2,
-            targetY: canvas.height - 120,
-            width: 70,
-            height: 40,
-            speed: 0.15
+            targetY: canvas.height - 150,
+            speed: 0.2
         };
 
         const ducks = [];
@@ -77,26 +77,33 @@
             });
         }
 
-        function handleMove(e) {
+        function handleTouch(e) {
+            e.preventDefault();
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const clientX = e.touches[0].clientX;
+            const clientY = e.touches[0].clientY;
             
             player.targetX = clientX - rect.left;
             player.targetY = clientY - rect.top;
         }
 
-        window.addEventListener("mousemove", handleMove);
-        window.addEventListener("touchmove", handleMove, { passive: false });
-        window.addEventListener("touchstart", handleMove, { passive: false });
+        window.addEventListener("touchmove", handleTouch, { passive: false });
+        window.addEventListener("touchstart", handleTouch, { passive: false });
+
+        // Varmistetaan toimivuus myös hiirellä testatessa
+        window.addEventListener("mousemove", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            player.targetX = e.clientX - rect.left;
+            player.targetY = e.clientY - rect.top;
+        });
 
         function spawnDuck() {
-            if (ducks.length < 5 && Math.random() < 0.03) {
+            if (ducks.length < 6 && Math.random() < 0.04) {
                 ducks.push({
-                    x: Math.random() * canvas.width - canvas.width / 2,
-                    y: Math.random() * canvas.height - canvas.height / 2,
+                    x: (Math.random() - 0.5) * canvas.width * 0.8,
+                    y: (Math.random() - 0.5) * canvas.height * 0.5,
                     z: canvas.width,
-                    size: 15,
+                    size: 25,
                     angle: Math.random() * 360,
                     spin: Math.random() * 4 - 2
                 });
@@ -107,6 +114,7 @@
             ctx.save();
             ctx.translate(x, y);
 
+            // Vesijetin perävesi / ionisuihku
             waterParticles.forEach(p => {
                 ctx.fillStyle = `rgba(0, 220, 255, ${p.alpha})`;
                 ctx.beginPath();
@@ -114,16 +122,38 @@
                 ctx.fill();
             });
 
-            ctx.fillStyle = "#ff00ff";
+            // Vesijetin runko (virtaviivainen)
+            ctx.fillStyle = "#ff007f"; // Menevä neon-magenta
             ctx.beginPath();
-            ctx.moveTo(0, -20);
-            ctx.lineTo(25, 20);
-            ctx.lineTo(-25, 20);
+            ctx.moveTo(0, -35);
+            ctx.bezierCurveTo(20, -10, 22, 25, 15, 35);
+            ctx.lineTo(-15, 35);
+            ctx.bezierCurveTo(-22, 25, -20, -10, 0, -35);
             ctx.closePath();
             ctx.fill();
 
-            ctx.fillStyle = "#00ffff";
-            ctx.fillRect(-8, -5, 16, 15);
+            // Istuin
+            ctx.fillStyle = "#111122";
+            ctx.beginPath();
+            ctx.ellipse(0, 5, 8, 15, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ohjaustanko
+            ctx.strokeStyle = "#00ffff";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-12, -10);
+            ctx.lineTo(12, -10);
+            ctx.stroke();
+
+            // Kuljettajan pleksi/tuulilasi
+            ctx.fillStyle = "rgba(0, 255, 255, 0.4)";
+            ctx.beginPath();
+            ctx.moveTo(0, -25);
+            ctx.lineTo(8, -12);
+            ctx.lineTo(-8, -12);
+            ctx.closePath();
+            ctx.fill();
 
             ctx.restore();
         }
@@ -134,20 +164,23 @@
             ctx.translate(screenX, screenY);
             ctx.rotate(duck.angle * Math.PI / 180);
 
-            ctx.fillStyle = "#ffff00";
+            // Ankan vartalo
+            ctx.fillStyle = "#ffcc00";
             ctx.beginPath();
             ctx.arc(0, 0, size, 0, Math.PI * 2);
             ctx.fill();
 
+            // Ankan pää
             ctx.beginPath();
-            ctx.arc(size * 0.5, -size * 0.7, size * 0.6, 0, Math.PI * 2);
+            ctx.arc(size * 0.6, -size * 0.6, size * 0.6, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = "#ff6600";
+            // Nokka
+            ctx.fillStyle = "#ff5500";
             ctx.beginPath();
-            ctx.moveTo(size * 0.9, -size * 0.8);
-            ctx.lineTo(size * 1.4, -size * 0.7);
-            ctx.lineTo(size * 0.9, -size * 0.5);
+            ctx.moveTo(size * 1.0, -size * 0.7);
+            ctx.lineTo(size * 1.6, -0.6 * size);
+            ctx.lineTo(size * 1.0, -size * 0.4);
             ctx.closePath();
             ctx.fill();
 
@@ -155,34 +188,37 @@
         }
 
         function update() {
+            // Pehmeämpi seuranta sormeen
             player.x += (player.targetX - player.x) * player.speed;
             player.y += (player.targetY - player.y) * player.speed;
 
+            // Rajat ruudulla
             if (player.x < 40) player.x = 40;
             if (player.x > canvas.width - 40) player.x = canvas.width - 40;
             if (player.y < 100) player.y = 100;
-            if (player.y > canvas.height - 40) player.y = canvas.height - 40;
+            if (player.y > canvas.height - 60) player.y = canvas.height - 60;
 
-            if (Math.random() < 0.6) {
+            // Moottorin vesiroiskeet / ionivanana
+            if (Math.random() < 0.7) {
                 waterParticles.push({
-                    x: player.x + (Math.random() * 16) - 8,
-                    y: player.y + 25,
+                    x: (Math.random() * 10) - 5,
+                    y: 35,
                     vx: (Math.random() * 2) - 1,
-                    vy: Math.random() * 4 + 3,
-                    size: Math.random() * 4 + 2,
+                    vy: Math.random() * 5 + 4,
+                    size: Math.random() * 3 + 2,
                     alpha: 1
                 });
             }
 
             for (let i = waterParticles.length - 1; i >= 0; i--) {
-                waterParticles[i].x += waterParticles[i].vx;
                 waterParticles[i].y += waterParticles[i].vy;
-                waterParticles[i].alpha -= 0.04;
+                waterParticles[i].alpha -= 0.05;
                 if (waterParticles[i].alpha <= 0) waterParticles.splice(i, 1);
             }
 
+            // Tähtien liike (avaruusefekti)
             stars.forEach(star => {
-                star.z -= 4;
+                star.z -= 5;
                 if (star.z <= 0) {
                     star.z = canvas.width;
                     star.x = Math.random() * canvas.width - canvas.width / 2;
@@ -190,10 +226,11 @@
                 }
             });
 
+            // Ankkojen liike ja törmäykset
             spawnDuck();
             for (let i = ducks.length - 1; i >= 0; i--) {
                 let d = ducks[i];
-                d.z -= 4;
+                d.z -= 5;
                 d.angle += d.spin;
 
                 if (d.z <= 0) {
@@ -206,13 +243,12 @@
                 let screenY = d.y * k + canvas.height / 2;
                 let currentSize = d.size * k;
 
-                if (d.z < 150 && d.z > 30) {
-                    let dist = Math.hypot(screenX - player.x, screenY - player.y);
-                    if (dist < currentSize + 25) {
-                        score++;
-                        scoreVal.innerText = score;
-                        ducks.splice(i, 1);
-                    }
+                // Osuman tunnistus vesijettiin
+                let dist = Math.hypot(screenX - player.x, screenY - player.y);
+                if (d.z < 100 && dist < currentSize + 30) {
+                    score++;
+                    scoreVal.innerText = score;
+                    ducks.splice(i, 1);
                 }
             }
         }
@@ -221,6 +257,7 @@
             ctx.fillStyle = "#07071c";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Piirretään tähdet
             ctx.fillStyle = "#ffffff";
             stars.forEach(star => {
                 let k = 300 / star.z;
@@ -233,35 +270,23 @@
                 }
             });
 
+            // Piirretään ankat
             ducks.forEach(d => {
                 let k = 400 / d.z;
                 let screenX = d.x * k + canvas.width / 2;
                 let screenY = d.y * k + canvas.height / 2;
                 let currentSize = d.size * k;
                 
-                if (d.z >= 100) {
-                    drawDuck(d, screenX, screenY, currentSize);
-                }
+                drawDuck(d, screenX, screenY, currentSize);
             });
 
+            // Piirretään vesijetti
             drawPlayer(player.x, player.y);
-
-            ducks.forEach(d => {
-                let k = 400 / d.z;
-                let screenX = d.x * k + canvas.width / 2;
-                let screenY = d.y * k + canvas.height / 2;
-                let currentSize = d.size * k;
-                
-                if (d.z < 100) {
-                    drawDuck(d, screenX, screenY, currentSize);
-                }
-            });
         }
 
         function loop() {
             update();
-            draw();
-            requestAnimationFrame(loop);
+            draw(); istu = requestAnimationFrame(loop);
         }
 
         loop();
